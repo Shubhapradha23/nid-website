@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const preferencesRoutes = require('./routes/preferences');
 const rankingsRoutes = require('./routes/rankings');
 const userRoutes = require('./routes/user');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/preferences', preferencesRoutes);
 app.use('/api/rankings', rankingsRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve index for SPA-style routing
 app.get('*', (req, res) => {

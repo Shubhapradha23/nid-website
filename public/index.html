@@ -17,6 +17,7 @@
         <div id="auth-tabs">
           <button type="button" class="tab active" data-tab="login">Log In</button>
           <button type="button" class="tab" data-tab="register">Register</button>
+          <button type="button" class="tab" data-tab="admin">Admin</button>
         </div>
 
         <form id="login-form" class="auth-form">
@@ -33,9 +34,17 @@
             <input type="number" name="batchYear" placeholder="20" min="2000" max="2099" required>
           </div>
           <input type="email" name="email" placeholder="Email (@nid.edu only)" required>
+          <input type="text" name="username" placeholder="Suggested username will appear here" autocomplete="off">
           <input type="password" name="password" placeholder="Password" required>
           <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
           <button type="submit">Register</button>
+        </form>
+
+        <form id="admin-login-form" class="auth-form hidden">
+          <p class="admin-hint">Admin view to see all registered users, their preferences, and marks.</p>
+          <input type="text" name="adminUsername" placeholder="Admin username" value="admin" required>
+          <input type="password" name="adminPassword" placeholder="Admin password" value="admin" required>
+          <button type="submit">Log In as Admin</button>
         </form>
 
         <div id="auth-message"></div>
@@ -88,6 +97,17 @@
           <div id="ranking-table"></div>
         </div>
       </main>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-screen" class="hidden">
+      <div class="admin-header">
+        <h2>Admin - Registered Users</h2>
+        <button type="button" id="admin-logout-btn">Logout Admin</button>
+      </div>
+      <p class="hint admin-hint">View all registered users, their latest discipline preferences and Sem 1 marks.</p>
+      <div id="admin-users-message"></div>
+      <div id="admin-users-table"></div>
     </div>
   </div>
 

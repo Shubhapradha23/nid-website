@@ -12,6 +12,7 @@ const authScreen = document.getElementById('auth-screen');
 const dashboard = document.getElementById('dashboard');
 const authMessage = document.getElementById('auth-message');
 const userDisplay = document.getElementById('user-display');
+const adminScreen = document.getElementById('admin-screen');
 
 // Helpers
 function showAuthMessage(msg, type = '') {
@@ -28,6 +29,14 @@ async function api(method, path, body) {
   return data;
 }
 
+// Generate username on client (same logic as backend)
+function generateUsernameClient(firstName, lastName, batchYear) {
+  const first = (firstName || '').slice(0, 4).toLowerCase().padEnd(4, 'x');
+  const batch = String(batchYear || '').replace(/\D/g, '').slice(0, 4) || '0000';
+  const last = (lastName || '').slice(-2).toLowerCase().padStart(2, 'x');
+  return `${first}-${batch}@${last}`;
+}
+
 // Auth
 async function checkAuth() {
   try {
@@ -35,17 +44,27 @@ async function checkAuth() {
     showDashboard(me);
     return true;
   } catch {
+    // Not logged in as a student, leave auth screen visible
     authScreen.classList.remove('hidden');
     dashboard.classList.add('hidden');
+    adminScreen.classList.add('hidden');
     return false;
   }
 }
 
 function showDashboard(me) {
   authScreen.classList.add('hidden');
+  adminScreen.classList.add('hidden');
   dashboard.classList.remove('hidden');
   userDisplay.textContent = me.username || 'User';
   loadPage('preferences');
+}
+
+function showAdminDashboard() {
+  authScreen.classList.add('hidden');
+  dashboard.classList.add('hidden');
+  adminScreen.classList.remove('hidden');
+  loadAdminUsers();
 }
 
 // Auth Tabs
@@ -53,11 +72,45 @@ document.querySelectorAll('#auth-tabs .tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('#auth-tabs .tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('login-form').classList.toggle('hidden', btn.dataset.tab !== 'login');
-    document.getElementById('register-form').classList.toggle('hidden', btn.dataset.tab !== 'register');
+    const tab = btn.dataset.tab;
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+    document.getElementById('admin-login-form').classList.toggle('hidden', tab !== 'admin');
     showAuthMessage('');
   });
 });
+
+// Auto-generate username while typing (until user edits username manually)
+(() => {
+  const form = document.getElementById('register-form');
+  if (!form) return;
+  const firstInput = form.querySelector('input[name="firstName"]');
+  const lastInput = form.querySelector('input[name="lastName"]');
+  const batchInput = form.querySelector('input[name="batchYear"]');
+  const usernameInput = form.querySelector('input[name="username"]');
+  if (!firstInput || !lastInput || !batchInput || !usernameInput) return;
+
+  let usernameTouched = false;
+
+  usernameInput.addEventListener('input', () => {
+    // Once user starts typing, we stop auto-overwriting
+    usernameTouched = true;
+  });
+
+  function maybeUpdateUsername() {
+    if (usernameTouched) return;
+    const suggested = generateUsernameClient(
+      firstInput.value,
+      lastInput.value,
+      batchInput.value
+    );
+    usernameInput.value = suggested;
+  }
+
+  firstInput.addEventListener('input', maybeUpdateUsername);
+  lastInput.addEventListener('input', maybeUpdateUsername);
+  batchInput.addEventListener('input', maybeUpdateUsername);
+})();
 
 // Login
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -90,11 +143,24 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     return;
   }
   try {
+    const regForm = document.getElementById('register-form');
+    const firstName = fd.get('firstName');
+    const lastName = fd.get('lastName');
+    const batchYear = fd.get('batchYear');
+    let username = (fd.get('username') || '').trim();
+    if (!username) {
+      username = generateUsernameClient(firstName, lastName, batchYear);
+      // Also reflect it back into the input so user sees it
+      const usernameInput = regForm.querySelector('input[name="username"]');
+      if (usernameInput) usernameInput.value = username;
+    }
+
     showAuthMessage('Registering...');
     const data = await api('POST', '/auth/register', {
-      firstName: fd.get('firstName'),
-      lastName: fd.get('lastName'),
-      batchYear: fd.get('batchYear'),
+      firstName,
+      lastName,
+      batchYear,
+      username,
       email,
       password: fd.get('password'),
       confirmPassword: fd.get('confirmPassword')
@@ -111,6 +177,34 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   await api('POST', '/auth/logout');
   authScreen.classList.remove('hidden');
   dashboard.classList.add('hidden');
+  adminScreen.classList.add('hidden');
+});
+
+// Admin login
+document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    showAuthMessage('Logging in as admin...');
+    await api('POST', '/admin/login', {
+      username: fd.get('adminUsername'),
+      password: fd.get('adminPassword')
+    });
+    showAuthMessage('Admin login successful.', 'success');
+    showAdminDashboard();
+  } catch (err) {
+    showAuthMessage(err.message, 'error');
+  }
+});
+
+// Admin logout
+document.getElementById('admin-logout-btn').addEventListener('click', async () => {
+  try {
+    await api('POST', '/admin/logout');
+  } catch (_) {}
+  adminScreen.classList.add('hidden');
+  dashboard.classList.add('hidden');
+  authScreen.classList.remove('hidden');
 });
 
 // Page Navigation
@@ -140,7 +234,6 @@ async function loadPreferences() {
     const { disciplines } = await api('GET', '/user/disciplines');
     const { preferences } = await api('GET', '/preferences');
 
-    const used = preferences ? preferences.prefs : [];
     for (let pos = 1; pos <= 8; pos++) {
       const row = document.createElement('div');
       row.className = 'pref-row';
@@ -162,6 +255,43 @@ async function loadPreferences() {
       row.appendChild(select);
       list.appendChild(row);
     }
+
+    // Set up dynamic option filtering so once a discipline is selected
+    // it is not available in the other dropdowns.
+    const selects = Array.from(document.querySelectorAll('#preference-list select'));
+
+    function refreshPreferenceOptions() {
+      const selectedBySelect = new Map();
+      selects.forEach(sel => {
+        const v = sel.value;
+        if (v) selectedBySelect.set(sel, v);
+      });
+
+      selects.forEach(sel => {
+        const currentValue = sel.value;
+        const otherSelected = new Set(
+          Array.from(selectedBySelect.entries())
+            .filter(([s]) => s !== sel)
+            .map(([, v]) => v)
+        );
+
+        Array.from(sel.options).forEach(opt => {
+          if (!opt.value) return;
+          if (opt.value === currentValue) {
+            opt.disabled = false;
+          } else {
+            opt.disabled = otherSelected.has(opt.value);
+          }
+        });
+      });
+    }
+
+    selects.forEach(sel => {
+      sel.addEventListener('change', refreshPreferenceOptions);
+    });
+
+    // Initial refresh to account for any pre-filled preferences
+    refreshPreferenceOptions();
   } catch (err) {
     list.innerHTML = '<p class="error">Failed to load disciplines</p>';
   }
@@ -305,6 +435,68 @@ async function loadRankings() {
   } catch (err) {
     statsEl.textContent = '';
     tableEl.innerHTML = '<p class="error">Failed to load rankings</p>';
+  }
+}
+
+// Admin users view
+async function loadAdminUsers() {
+  const msgEl = document.getElementById('admin-users-message');
+  const tableEl = document.getElementById('admin-users-table');
+  msgEl.textContent = '';
+  msgEl.className = '';
+  tableEl.innerHTML = '';
+
+  try {
+    const data = await api('GET', '/admin/users');
+    if (!data.users || data.users.length === 0) {
+      msgEl.textContent = 'No users registered yet.';
+      msgEl.className = 'success';
+      return;
+    }
+
+    const rowsHtml = data.users.map((u, idx) => {
+      const fullName = `${escapeHtml(u.firstName)} ${escapeHtml(u.lastName)}`;
+      const prefs = u.preferences
+        ? `<ol class="prefs-list">${u.preferences.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>`
+        : '<span class="hint">No preferences yet</span>';
+      const marks = u.sem1Marks != null ? u.sem1Marks : 'Not entered';
+      const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${fullName}</td>
+          <td>${escapeHtml(u.batchYear)}</td>
+          <td>${escapeHtml(u.email)}</td>
+          <td><code>${escapeHtml(u.username)}</code></td>
+          <td>${marks}</td>
+          <td>${prefs}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tableEl.innerHTML = `
+      <div class="admin-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Batch</th>
+              <th>Email</th>
+              <th>Username</th>
+              <th>Sem 1 Marks</th>
+              <th>Latest Preferences</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    msgEl.textContent = err.message || 'Failed to load users';
+    msgEl.className = 'error';
   }
 }
 

@@ -18,7 +18,7 @@ function generateUsername(firstName, lastName, batchYear) {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, batchYear, email, password, confirmPassword } = req.body;
+    const { firstName, lastName, batchYear, email, password, confirmPassword, username: bodyUsername } = req.body;
 
     if (!firstName || !lastName || !batchYear || !email || !password || !confirmPassword) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -37,8 +37,21 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'This email is already registered' });
     }
 
+    let username = (bodyUsername || '').trim();
+    if (!username) {
+      username = generateUsername(firstName, lastName, batchYear);
+    }
+
+    if (username.length < 3 || username.length > 100) {
+      return res.status(400).json({ error: 'Username must be between 3 and 100 characters' });
+    }
+
+    const [existingUsername] = await db.query('SELECT id FROM users WHERE username = ?', [username]);
+    if (existingUsername.length > 0) {
+      return res.status(400).json({ error: 'This username is already taken. Please choose a different one.' });
+    }
+
     const hash = await bcrypt.hash(password, 10);
-    const username = generateUsername(firstName, lastName, batchYear);
 
     const [result] = await db.query(
       'INSERT INTO users (first_name, last_name, batch_year, email, username, password_hash) VALUES (?, ?, ?, ?, ?, ?)',

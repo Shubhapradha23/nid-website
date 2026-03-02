@@ -160,6 +160,13 @@ body {
 #auth-message.error { color: var(--error); }
 #auth-message.success { color: var(--success); }
 
+/* Admin hint text in auth card */
+.admin-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
 /* Dashboard Layout */
 #dashboard {
   display: flex;
@@ -419,3 +426,82 @@ body {
 .ranking-table .rank-1 { color: #fbbf24; }
 .ranking-table .rank-2 { color: #94a3b8; }
 .ranking-table .rank-3 { color: #cd7f32; }
+
+/* Admin screen */
+#admin-screen {
+  width: 100%;
+  max-width: 1200px;
+  padding: 2rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.admin-header h2 {
+  font-size: 1.5rem;
+}
+
+#admin-logout-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#admin-logout-btn:hover {
+  color: var(--text);
+  border-color: var(--error);
+}
+
+#admin-users-message {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+#admin-users-message.error { color: var(--error); }
+#admin-users-message.success { color: var(--success); }
+
+#admin-users-table .admin-table-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#admin-users-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#admin-users-table th,
+#admin-users-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+#admin-users-table th {
+  background: var(--surface);
+  font-weight: 600;
+}
+
+#admin-users-table tr:last-child td {
+  border-bottom: none;
+}
+
+#admin-users-table .prefs-list {
+  list-style: decimal;
+  margin-left: 1.25rem;
+}
+
+#admin-users-table .prefs-list li {
+  margin-bottom: 0.15rem;
+}
