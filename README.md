@@ -22,14 +22,14 @@ A website for NID students to register, enter their discipline preferences and S
 
 ## 8 Disciplines
 
-1. Textile design  
-2. Product design  
-3. Glass and ceramics design  
-4. Furniture and interior design  
-5. Film and video communication  
-6. Graphic design  
-7. Animation  
-8. Exhibition design  
+1. Textile design
+2. Product design
+3. Glass and ceramics design
+4. Furniture and interior design
+5. Film and video communication
+6. Graphic design
+7. Animation
+8. Exhibition design
 
 ## 1. Install prerequisites on Windows (no `winget`)
 
@@ -63,13 +63,13 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; `
   iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 ```
 
-3. Close and reopen **Administrator PowerShell**, then run:
+1. Close and reopen **Administrator PowerShell**, then run:
 
 ```powershell
 choco install -y nodejs-lts
 ```
 
-4. Verify:
+1. Verify:
 
 ```powershell
 node -v
@@ -129,7 +129,7 @@ npm install
 copy .env.example .env
 ```
 
-2. Edit `.env` (using Notepad, VS Code, or any editor) and set your MySQL credentials:
+1. Edit `.env` (using Notepad, VS Code, or any editor) and set your MySQL credentials:
 
 ```text
 DB_HOST=localhost
