@@ -382,7 +382,7 @@ async function loadRankings() {
     tableEl.innerHTML = `
       <div class="ranking-table">
         <table>
-          <thead><tr><th>Rank</th><th>Discipline</th><th>Cut-off Score</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Discipline</th><th>Relative Demand</th></tr></thead>
           <tbody>
             ${data.ranking.map((r, i) => `
               <tr>
@@ -405,7 +405,7 @@ async function loadRankings() {
         data: {
           labels: data.ranking.map(r => r.name),
           datasets: [{
-            label: 'Cut-off Score',
+            label: 'Relative Demand',
             data: data.ranking.map(r => r.score),
             backgroundColor: 'rgba(99, 102, 241, 0.7)',
             borderColor: 'rgba(99, 102, 241, 1)',
